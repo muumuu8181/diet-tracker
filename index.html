@@ -752,11 +752,11 @@
         class MealTracker {
             constructor() {
                 this.currentDate = new Date();
-                this.meals = this.loadMeals();
                 this.currentRecordType = 'meal';
                 this.draggedElement = null;
                 this.draggedData = null;
-                this.debugLog = [];
+                this.debugLog = []; // デバッグログを最初に初期化
+                this.meals = this.loadMeals();
                 this.initSampleData();
                 this.init();
                 this.setupDebugLog();
