@@ -885,25 +885,26 @@
             }
 
             resetAllData() {
-                this.log('全データをリセット開始');
+                this.log('現在のアカウントのデータをリセット開始', { account: this.currentAccount });
                 
-                // LocalStorageをクリア
-                localStorage.clear();
-                this.log('LocalStorageをクリアしました');
+                // 現在のアカウントのLocalStorageデータのみクリア
+                const storageKey = `meals_${this.currentAccount}`;
+                localStorage.removeItem(storageKey);
+                this.log(`${storageKey}をクリアしました`);
                 
                 // メモリ上のデータもクリア
                 this.meals = {};
                 this.log('メモリ上のデータをクリアしました');
                 
-                // サンプルデータを再作成
+                // サンプルデータを再作成（アカウント1のみ）
                 this.initSampleData();
-                this.log('サンプルデータを再作成しました');
+                this.log('初期データを作成しました');
                 
                 // 画面を再描画
                 this.renderMeals();
                 this.log('画面を再描画しました');
                 
-                this.log('全データリセット完了');
+                this.log('データリセット完了', { account: this.currentAccount });
             }
 
             toggleFirebase() {
@@ -955,7 +956,8 @@
                     existingData: !!this.meals[dateString] 
                 });
                 
-                if (!this.meals[dateString]) {
+                if (!this.meals[dateString] && this.currentAccount === 'account1') {
+                    // アカウント1のみサンプルデータを作成
                     this.meals[dateString] = {
                         '0-6': [],
                         '6-12': [{
@@ -973,7 +975,16 @@
                         '18-24': []
                     };
                     this.saveMeals();
-                    this.log('サンプルデータを作成しました');
+                    this.log('アカウント1にサンプルデータを作成しました');
+                } else if (!this.meals[dateString]) {
+                    // 他のアカウントは空データで初期化
+                    this.meals[dateString] = {
+                        '0-6': [],
+                        '6-12': [],
+                        '12-18': [],
+                        '18-24': []
+                    };
+                    this.log(`${this.currentAccount}用に空データを作成`);
                 } else {
                     this.log('既存データを使用', { 
                         data: JSON.stringify(this.meals[dateString]) 
@@ -989,6 +1000,12 @@
                         this.currentAccount = e.target.value;
                         this.log('アカウントを切り替え', { account: this.currentAccount });
                         this.meals = this.loadMeals(); // データを再読み込み
+                        
+                        // アカウント別の初期データチェック
+                        if (!useFirebase && Object.keys(this.meals).length === 0) {
+                            this.initSampleData();
+                        }
+                        
                         this.renderMeals(); // 画面を更新
                     });
                     this.log('アカウント選択のイベントリスナーを設定');
