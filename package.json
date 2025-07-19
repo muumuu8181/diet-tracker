@@ -1,0 +1,23 @@
+{
+  "name": "diet-tracker",
+  "version": "1.0.0",
+  "description": "Simple diet tracking app with drag & drop functionality",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step needed for static site'",
+    "deploy": "firebase deploy",
+    "serve": "firebase serve"
+  },
+  "devDependencies": {
+    "firebase-tools": "^12.0.0"
+  },
+  "keywords": [
+    "diet",
+    "tracker",
+    "health",
+    "food",
+    "logging"
+  ],
+  "author": "Diet Tracker App",
+  "license": "MIT"
+}
