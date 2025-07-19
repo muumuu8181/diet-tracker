@@ -681,7 +681,7 @@
                     <button id="clearLogBtn" class="debug-btn">クリア</button>
                     <button id="copyLogBtn" class="debug-btn">コピー</button>
                     <button id="resetDataBtn" class="debug-btn">データリセット</button>
-                    <button id="firebaseToggleBtn" class="debug-btn">Firebase: OFF</button>
+                    <button id="firebaseToggleBtn" class="debug-btn">Firebase: ON</button>
                     <button id="toggleLogBtn" class="debug-btn">非表示</button>
                 </div>
             </div>
@@ -725,20 +725,20 @@
     <script>
         // Firebase設定
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyA5PXKChizYDCXF_GJ4KL6Ylq9K5hCPXWE",
+            authDomain: "shares-b1b97.firebaseapp.com",
+            databaseURL: "https://shares-b1b97-default-rtdb.firebaseio.com",
+            projectId: "shares-b1b97",
+            storageBucket: "shares-b1b97.firebasestorage.app",
+            messagingSenderId: "38311063248",
+            appId: "1:38311063248:web:0d2d5726d12b305b24b8d5"
         };
 
-        // Firebase初期化（コメントアウト状態）
-        // firebase.initializeApp(firebaseConfig);
-        // const database = firebase.database();
-        // const mealsRef = database.ref('diet-tracker-meals');
-        let useFirebase = false;
+        // Firebase初期化
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const mealsRef = database.ref('diet-tracker-meals');
+        let useFirebase = true;
 
         // UUIDを生成する関数
         function generateUUID() {
