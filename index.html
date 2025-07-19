@@ -712,7 +712,7 @@
         <div id="debugLogContainer" class="debug-log-container">
             <div class="debug-log-header">
                 <span>デバッグログ</span>
-                <span id="versionInfo" style="color: #999; font-size: 12px; margin-left: 10px;">v2025.07.20-07:55</span>
+                <span id="versionInfo" style="color: #0066cc; font-size: 14px; font-weight: bold; margin-left: 15px; padding: 2px 6px; background: #e6f3ff; border-radius: 3px;">v2025.07.20-08:33</span>
                 <div class="debug-log-controls">
                     <button id="clearLogBtn" class="debug-btn">クリア</button>
                     <button id="copyLogBtn" class="debug-btn">コピー</button>
@@ -760,7 +760,7 @@
 
     <script>
         // ビルドバージョン（更新時刻）
-        const BUILD_VERSION = '2025.07.20-07:56';
+        const BUILD_VERSION = '2025.07.20-08:33';
         
         // Firebase設定
         const firebaseConfig = {
@@ -793,6 +793,7 @@
                 this.currentDate = new Date();
                 this.currentRecordType = 'meal';
                 this.currentAccount = 'account1'; // デフォルトアカウント
+                this.currentAccountRef = null; // Firebaseリスナー管理用
                 this.draggedElement = null;
                 this.draggedData = null;
                 this.debugLog = []; // デバッグログを最初に初期化
@@ -1384,8 +1385,14 @@
                     return;
                 }
                 
-                const accountRef = mealsRef.child(this.currentAccount);
-                accountRef.on('value', (snapshot) => {
+                // 既存のリスナーを削除
+                if (this.currentAccountRef) {
+                    this.currentAccountRef.off();
+                    this.log('前のアカウントのFirebaseリスナーを削除');
+                }
+                
+                this.currentAccountRef = mealsRef.child(this.currentAccount);
+                this.currentAccountRef.on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     this.log('Firebaseデータ受信', { 
                         dataSize: Object.keys(data).length,
