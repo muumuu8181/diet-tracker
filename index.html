@@ -681,6 +681,7 @@
                     <button id="clearLogBtn" class="debug-btn">クリア</button>
                     <button id="copyLogBtn" class="debug-btn">コピー</button>
                     <button id="resetDataBtn" class="debug-btn">データリセット</button>
+                    <button id="firebaseToggleBtn" class="debug-btn">Firebase: OFF</button>
                     <button id="toggleLogBtn" class="debug-btn">非表示</button>
                 </div>
             </div>
@@ -717,7 +718,28 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <script>
+        // Firebase設定
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Firebase初期化（コメントアウト状態）
+        // firebase.initializeApp(firebaseConfig);
+        // const database = firebase.database();
+        // const mealsRef = database.ref('diet-tracker-meals');
+        let useFirebase = false;
+
         // UUIDを生成する関数
         function generateUUID() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -776,6 +798,10 @@
                 
                 document.getElementById('resetDataBtn').addEventListener('click', () => {
                     this.resetAllData();
+                });
+                
+                document.getElementById('firebaseToggleBtn').addEventListener('click', () => {
+                    this.toggleFirebase();
                 });
                 
                 document.getElementById('toggleLogBtn').addEventListener('click', () => {
@@ -837,6 +863,31 @@
                 this.log('画面を再描画しました');
                 
                 this.log('全データリセット完了');
+            }
+
+            toggleFirebase() {
+                const btn = document.getElementById('firebaseToggleBtn');
+                
+                if (typeof firebase === 'undefined') {
+                    this.log('Firebase SDKが読み込まれていません');
+                    alert('Firebase設定が必要です。設定方法はREADMEを確認してください。');
+                    return;
+                }
+                
+                useFirebase = !useFirebase;
+                btn.textContent = useFirebase ? 'Firebase: ON' : 'Firebase: OFF';
+                
+                if (useFirebase) {
+                    this.log('Firebaseモードに切り替え');
+                    // Firebaseが有効な場合、データを再読み込み
+                    this.loadMealsFromFirebase();
+                } else {
+                    this.log('LocalStorageモードに切り替え');
+                    // LocalStorageモードの場合、データを再読み込み
+                    const stored = localStorage.getItem('meals');
+                    this.meals = stored ? JSON.parse(stored) : {};
+                    this.renderMeals();
+                }
             }
 
             toggleDebugLog() {
@@ -1205,16 +1256,38 @@
             }
 
             loadMeals() {
-                try {
-                    const stored = localStorage.getItem('meals');
-                    const data = stored ? JSON.parse(stored) : {};
-                    
-                    // 古いデータ形式を新しい形式に変換
-                    return this.migrateOldData(data);
-                } catch (error) {
-                    console.error('データ読み込みエラー:', error);
+                if (useFirebase) {
+                    // Firebaseからデータを読み込み
+                    this.loadMealsFromFirebase();
                     return {};
+                } else {
+                    // LocalStorageからデータを読み込み
+                    try {
+                        const stored = localStorage.getItem('meals');
+                        const data = stored ? JSON.parse(stored) : {};
+                        
+                        // 古いデータ形式を新しい形式に変換
+                        return this.migrateOldData(data);
+                    } catch (error) {
+                        console.error('データ読み込みエラー:', error);
+                        return {};
+                    }
                 }
+            }
+
+            loadMealsFromFirebase() {
+                this.log('Firebaseからデータを読み込み中...');
+                
+                mealsRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    this.log('Firebaseデータ受信', { dataSize: Object.keys(data).length });
+                    
+                    this.meals = this.migrateOldData(data);
+                    this.renderMeals();
+                }, (error) => {
+                    this.log('Firebase読み込みエラー', error);
+                    console.error('Firebase読み込みエラー:', error);
+                });
             }
 
             migrateOldData(data) {
@@ -1271,11 +1344,36 @@
             }
 
             saveMeals() {
-                try {
-                    localStorage.setItem('meals', JSON.stringify(this.meals));
-                } catch (error) {
-                    console.error('データ保存エラー:', error);
+                if (useFirebase) {
+                    // Firebaseにデータを保存
+                    this.saveMealsToFirebase();
+                } else {
+                    // LocalStorageにデータを保存
+                    try {
+                        localStorage.setItem('meals', JSON.stringify(this.meals));
+                    } catch (error) {
+                        console.error('データ保存エラー:', error);
+                    }
                 }
+            }
+
+            saveMealsToFirebase() {
+                this.log('Firebaseにデータを保存中...', { dataSize: Object.keys(this.meals).length });
+                
+                mealsRef.set(this.meals).then(() => {
+                    this.log('Firebase保存成功');
+                }).catch((error) => {
+                    this.log('Firebase保存エラー', error);
+                    console.error('Firebase保存エラー:', error);
+                    
+                    // Firebaseエラー時はLocalStorageにフォールバック
+                    try {
+                        localStorage.setItem('meals', JSON.stringify(this.meals));
+                        this.log('LocalStorageにフォールバック保存');
+                    } catch (localError) {
+                        console.error('LocalStorage保存もエラー:', localError);
+                    }
+                });
             }
 
             getDateString(date) {
