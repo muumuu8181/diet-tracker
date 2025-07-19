@@ -712,6 +712,7 @@
         <div id="debugLogContainer" class="debug-log-container">
             <div class="debug-log-header">
                 <span>デバッグログ</span>
+                <span id="versionInfo" style="color: #999; font-size: 12px; margin-left: 10px;">v2025.07.20-07:55</span>
                 <div class="debug-log-controls">
                     <button id="clearLogBtn" class="debug-btn">クリア</button>
                     <button id="copyLogBtn" class="debug-btn">コピー</button>
@@ -758,6 +759,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
+        // ビルドバージョン（更新時刻）
+        const BUILD_VERSION = '2025.07.20-07:56';
+        
         // Firebase設定
         const firebaseConfig = {
             apiKey: "AIzaSyA5PXKChizYDCXF_GJ4KL6Ylq9K5hCPXWE",
@@ -802,7 +806,14 @@
             }
 
             init() {
-                this.log('アプリケーション初期化開始', { useFirebase });
+                this.log('アプリケーション初期化開始', { useFirebase, version: BUILD_VERSION });
+                
+                // バージョン情報を表示
+                const versionEl = document.getElementById('versionInfo');
+                if (versionEl) {
+                    versionEl.textContent = `v${BUILD_VERSION}`;
+                }
+                
                 this.setupEventListeners();
                 this.updateDateDisplay();
                 this.setupDragAndDrop(); // イベントデリゲーションで設定
