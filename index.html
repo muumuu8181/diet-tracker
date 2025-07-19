@@ -757,7 +757,10 @@
                 this.draggedData = null;
                 this.debugLog = []; // デバッグログを最初に初期化
                 this.meals = this.loadMeals();
-                this.initSampleData();
+                // Firebase使用時はサンプルデータを作成しない
+                if (!useFirebase) {
+                    this.initSampleData();
+                }
                 this.init();
                 this.setupDebugLog();
             }
@@ -1309,8 +1312,14 @@
                         data: JSON.stringify(data).substring(0, 200) + '...'
                     });
                     
-                    this.meals = this.migrateOldData(data);
-                    this.renderMeals();
+                    // Firebaseが空の場合のみサンプルデータを作成
+                    if (Object.keys(data).length === 0) {
+                        this.log('Firebase上にデータが存在しないため、サンプルデータを作成');
+                        this.initSampleData();
+                    } else {
+                        this.meals = this.migrateOldData(data);
+                        this.renderMeals();
+                    }
                 }, (error) => {
                     this.log('Firebase読み込みエラー', error);
                     console.error('Firebase読み込みエラー:', error);
