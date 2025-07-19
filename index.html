@@ -665,8 +665,7 @@
                 +
             </button>
             <div class="fab-menu" id="fabMenu">
-                <button class="fab fab-option" data-type="meal" aria-label="食事を記録" title="食事を記録">🍽️</button>
-                <button class="fab fab-option" data-type="drink" aria-label="飲み物を記録" title="飲み物を記録">🥤</button>
+                <button class="fab fab-option" data-type="meal" aria-label="食事・飲み物を記録" title="食事・飲み物を記録">🍽️</button>
                 <button class="fab fab-option" data-type="clothing" aria-label="服装を記録" title="服装を記録">👕</button>
                 <button class="fab fab-option" data-type="toilet" aria-label="トイレを記録" title="トイレを記録">🚽</button>
                 <button class="fab fab-option" data-type="weight" aria-label="体重を記録" title="体重を記録">⚖️</button>
@@ -1550,16 +1549,21 @@
 
                 switch(type) {
                     case 'meal':
-                        title.textContent = '食事を追加';
+                        title.textContent = '食事・飲み物を追加';
                         formContent.innerHTML = `
                             <div class="form-group">
-                                <label for="recordTime">時刻</label>
+                                <label for="recordTime">開始時刻</label>
                                 <input type="time" id="recordTime" name="recordTime" required>
                                 <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">時間に基づいて自動で時間帯を判定します</small>
                             </div>
                             <div class="form-group">
-                                <label for="recordContent">食事内容</label>
-                                <textarea id="recordContent" name="recordContent" placeholder="例: パン、牛乳" required></textarea>
+                                <label for="recordEndTime">終了時刻（任意）</label>
+                                <input type="time" id="recordEndTime" name="recordEndTime">
+                                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">飲み物を長時間かけて飲む場合に記録</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="recordContent">内容</label>
+                                <textarea id="recordContent" name="recordContent" placeholder="例: パン、牛乳、水1L、コーヒー" required></textarea>
                             </div>
                         `;
                         break;
@@ -1578,24 +1582,6 @@
                                 </div>
                             </div>
                             <textarea id="recordContent" name="recordContent" style="display: none;"></textarea>
-                        `;
-                        break;
-                    case 'drink':
-                        title.textContent = '飲み物を記録';
-                        formContent.innerHTML = `
-                            <div class="form-group">
-                                <label for="drinkStartTime">飲み始め時刻</label>
-                                <input type="time" id="drinkStartTime" name="drinkStartTime" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="drinkEndTime">飲み終わり時刻（任意）</label>
-                                <input type="time" id="drinkEndTime" name="drinkEndTime">
-                                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">空欄の場合は飲み始め時刻のみ記録</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="recordContent">飲み物内容</label>
-                                <textarea id="recordContent" name="recordContent" placeholder="例: 水 1L、コーヒー" required></textarea>
-                            </div>
                         `;
                         break;
                     case 'clothing':
@@ -1655,17 +1641,17 @@
                     const clothingNote = formData.get('clothingNote');
                     content = `${weightValue}kg${clothingNote ? ` (${clothingNote})` : ''}`;
                     time = formData.get('recordTime');
-                } else if (type === 'drink') {
-                    const startTime = formData.get('drinkStartTime');
-                    const endTime = formData.get('drinkEndTime');
-                    const drinkContent = formData.get('recordContent');
+                } else if (type === 'meal') {
+                    const startTime = formData.get('recordTime');
+                    const endTime = formData.get('recordEndTime');
+                    const mealContent = formData.get('recordContent');
                     
                     if (endTime && endTime !== startTime) {
-                        content = `${drinkContent} (${startTime}〜${endTime})`;
+                        content = `${mealContent} (${startTime}〜${endTime})`;
                     } else {
-                        content = drinkContent;
+                        content = mealContent;
                     }
-                    time = startTime; // 飲み始め時刻を基準にする
+                    time = startTime; // 開始時刻を基準にする
                 } else {
                     content = formData.get('recordContent');
                     time = formData.get('recordTime');
