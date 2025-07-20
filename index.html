@@ -750,7 +750,7 @@
 
     <script>
         // ビルドバージョン（更新時刻）
-        const BUILD_VERSION = '2025.07.20-11:05';
+        const BUILD_VERSION = '2025.07.20-11:15';
         
         // Firebase設定
         const firebaseConfig = {
@@ -786,6 +786,8 @@
                 this.currentAccount = 'guest'; // デフォルトはゲスト
                 this.currentUser = null; // 認証ユーザー
                 this.currentAccountRef = null; // Firebaseリスナー管理用
+                this.isInDemoMode = false; // デモモード状態
+                this.originalAccount = null; // デモモード前のアカウント
                 this.draggedElement = null;
                 this.draggedData = null;
                 this.debugLog = []; // デバッグログを最初に初期化
@@ -953,6 +955,11 @@
             // サインアウト
             signOut() {
                 this.log('ログアウトします');
+                
+                // デモモード状態をリセット
+                this.isInDemoMode = false;
+                this.originalAccount = null;
+                
                 auth.signOut()
                     .then(() => {
                         this.log('ログアウトが完了しました');
@@ -962,75 +969,41 @@
                     });
             }
 
-            // デモ表示（ログイン中でもデモアカウントのデータを表示）
-            switchToDemo() {
-                this.log('🎭 デモ表示モードに切り替え');
-                
-                // 現在の認証状態は保持したまま、表示だけデモアカウントにする
-                const originalAccount = this.currentAccount;
-                const originalUser = this.currentUser;
-                
-                // 一時的にデモアカウントのデータを読み込み
-                this.currentAccount = 'account1'; // デモ用アカウント
+            // 簡単切り替え: ログインアカウント ↔ デモアカウント
+            quickToggleDemo() {
+                // 既存のトグル状態を確認
+                if (this.isInDemoMode) {
+                    // デモモードから復帰
+                    this.log('🔄 デモモードから復帰');
+                    this.currentAccount = this.originalAccount;
+                    this.isInDemoMode = false;
+                } else {
+                    // デモモードに切り替え
+                    this.log('🎭 デモモードに切り替え');
+                    this.originalAccount = this.currentAccount; // 元のアカウントを保存
+                    this.currentAccount = 'account1'; // デモ用アカウント
+                    this.isInDemoMode = true;
+                }
+
+                // データを読み込んで表示更新
                 this.meals = this.loadMeals();
                 
                 // デモ用サンプルデータがない場合は作成
-                const dateString = this.getDateString(this.currentDate);
-                if (!this.meals[dateString]) {
-                    this.initSampleData();
+                if (this.isInDemoMode) {
+                    const dateString = this.getDateString(this.currentDate);
+                    if (!this.meals[dateString]) {
+                        this.initSampleData();
+                    }
                 }
                 
                 this.renderMeals();
+                this.updateAccountUI(this.currentUser); // UIを更新
                 
-                // デモ表示中であることを示す
-                this.log('🎭 デモ表示中（認証状態は保持）', { 
-                    originalAccount: originalAccount,
-                    demoAccount: this.currentAccount,
-                    user: originalUser ? originalUser.email : 'guest'
+                this.log('✅ アカウント切り替え完了', { 
+                    currentAccount: this.currentAccount,
+                    isDemo: this.isInDemoMode,
+                    user: this.currentUser ? this.currentUser.email : 'guest'
                 });
-                
-                // 元のアカウントに戻すボタンを表示
-                this.showDemoModeIndicator(originalAccount, originalUser);
-            }
-
-            // デモモード表示中の案内を表示
-            showDemoModeIndicator(originalAccount, originalUser) {
-                const accountSelector = document.getElementById('accountSelector');
-                const backButtonHTML = `
-                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
-                        <span style="color: #856404;">🎭 デモ表示中</span>
-                        <button onclick="mealTracker.returnFromDemo('${originalAccount}', ${originalUser ? 'true' : 'false'})" 
-                                class="debug-btn" style="background-color: #007bff; margin-left: 10px;">
-                            ${originalUser ? 'ログインアカウントに戻る' : 'ゲストモードに戻る'}
-                        </button>
-                    </div>
-                `;
-                accountSelector.insertAdjacentHTML('beforebegin', backButtonHTML);
-            }
-
-            // デモ表示から元のアカウントに戻る
-            returnFromDemo(originalAccount, hadUser) {
-                this.log('🔄 デモ表示から復帰');
-                
-                // デモモード表示を削除
-                const demoIndicator = document.querySelector('div[style*="background: #fff3cd"]');
-                if (demoIndicator) {
-                    demoIndicator.remove();
-                }
-                
-                // 元のアカウントに戻す
-                this.currentAccount = originalAccount;
-                this.meals = this.loadMeals();
-                this.renderMeals();
-                
-                // UIを更新（認証状態に応じて）
-                if (hadUser === 'true') {
-                    this.updateAccountUI(this.currentUser);
-                } else {
-                    this.updateAccountUI(null);
-                }
-                
-                this.log('✅ 元のアカウントに復帰完了', { account: originalAccount });
             }
 
             // ゲストモードで使用
@@ -1043,6 +1016,10 @@
                     this.currentAccountRef = null;
                     this.log('Firebaseリスナーをクリア（ゲストモード）');
                 }
+                
+                // デモモード状態をリセット
+                this.isInDemoMode = false;
+                this.originalAccount = null;
                 
                 this.currentAccount = 'guest';
                 this.currentUser = null;
@@ -1065,22 +1042,31 @@
                 
                 if (user) {
                     // ログイン済み: ユーザー情報とボタンを表示
+                    const isDemo = this.isInDemoMode;
+                    const currentModeText = isDemo ? '🎭 デモ表示中' : '✅ ログイン中';
+                    const currentModeColor = isDemo ? '#856404' : '#4285f4';
+                    const currentModeBg = isDemo ? '#fff3cd' : '#e8f4fd';
+                    const toggleButtonText = isDemo ? '👤 ログインデータに戻る' : '🎭 デモを見る';
+                    const toggleButtonColor = isDemo ? '#007bff' : '#28a745';
+                    
                     accountSelector.innerHTML = `
                         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            ${user.photoURL ? `<img src="${user.photoURL}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid #4285f4;">` : ''}
+                            ${user.photoURL ? `<img src="${user.photoURL}" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid ${currentModeColor};">` : ''}
                             <div style="display: flex; flex-direction: column;">
-                                <span style="color: #4285f4; font-weight: bold; background: #e8f4fd; padding: 4px 8px; border-radius: 4px;">
-                                    ✅ ${user.displayName || user.email}
+                                <span style="color: ${currentModeColor}; font-weight: bold; background: ${currentModeBg}; padding: 4px 8px; border-radius: 4px;">
+                                    ${currentModeText}: ${user.displayName || user.email}
                                 </span>
                                 <span style="color: #666; font-size: 11px;">
                                     🆔 ${user.uid.substring(0, 12)}... | 
                                     📧 ${user.emailVerified ? '認証済み' : '未認証'} |
-                                    🔐 Firebase同期中
+                                    💾 ${isDemo ? 'LocalStorage' : 'Firebase同期中'}
                                 </span>
                             </div>
+                            <button onclick="mealTracker.quickToggleDemo()" class="debug-btn" style="background-color: ${toggleButtonColor};">
+                                ${toggleButtonText}
+                            </button>
                             <button onclick="mealTracker.signOut()" class="debug-btn" style="background-color: #dc3545;">ログアウト</button>
                             <button onclick="mealTracker.signInWithGoogle()" class="debug-btn" style="background-color: #4285f4;">アカウント切替</button>
-                            <button onclick="mealTracker.switchToDemo()" class="debug-btn" style="background-color: #28a745;">デモ表示</button>
                         </div>
                     `;
                 } else {
