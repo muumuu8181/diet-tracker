@@ -702,10 +702,11 @@
         <div id="debugLogContainer" class="debug-log-container">
             <div class="debug-log-header">
                 <span>デバッグログ</span>
-                <span id="versionInfo" style="color: #0066cc; font-size: 14px; font-weight: bold; margin-left: 15px; padding: 2px 6px; background: #e6f3ff; border-radius: 3px;">v2025.07.20-08:33</span>
+                <span id="versionInfo" style="color: #0066cc; font-size: 14px; font-weight: bold; margin-left: 15px; padding: 2px 6px; background: #e6f3ff; border-radius: 3px;">v2025.07.20-12:00</span>
                 <div class="debug-log-controls">
                     <button id="clearLogBtn" class="debug-btn">クリア</button>
                     <button id="copyLogBtn" class="debug-btn">コピー</button>
+                    <button id="showStorageBtn" class="debug-btn">過去データ確認</button>
                     <button id="resetDataBtn" class="debug-btn">データリセット</button>
                     <button id="firebaseToggleBtn" class="debug-btn">Firebase: ON</button>
                 </div>
@@ -842,6 +843,10 @@
                 
                 document.getElementById('copyLogBtn').addEventListener('click', () => {
                     this.copyDebugLog();
+                });
+                
+                document.getElementById('showStorageBtn').addEventListener('click', () => {
+                    this.showLocalStorageData();
                 });
                 
                 document.getElementById('resetDataBtn').addEventListener('click', () => {
@@ -1115,6 +1120,60 @@
                 }).catch(err => {
                     this.log('クリップボードへのコピーに失敗しました', err);
                 });
+            }
+
+            showLocalStorageData() {
+                const allKeys = Object.keys(localStorage);
+                const mealKeys = allKeys.filter(key => key.startsWith('meals'));
+                
+                this.log('=== 📂 LocalStorage 過去データ一覧 ===');
+                
+                if (mealKeys.length === 0) {
+                    this.log('❌ 過去のデータが見つかりません');
+                    return;
+                }
+                
+                mealKeys.forEach(key => {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        const dates = Object.keys(data);
+                        const recordCount = dates.reduce((total, date) => {
+                            const dayData = data[date];
+                            return total + Object.values(dayData).flat().length;
+                        }, 0);
+                        
+                        this.log(`📁 ${key}:`);
+                        this.log(`   📅 ${dates.length} 日分のデータ`);
+                        this.log(`   📝 合計 ${recordCount} 件の記録`);
+                        this.log(`   📊 最新: ${dates.sort().pop() || 'なし'}`);
+                        
+                        if (dates.length > 0) {
+                            this.log(`   ⚡ このデータを復元するには「${key.replace('meals_', '')}」アカウントに切り替えてください`);
+                        }
+                    } catch (error) {
+                        this.log(`❌ ${key}: データの読み込みエラー`, error);
+                    }
+                });
+                
+                // 削除された可能性のある古いキーも確認
+                const legacyKey = 'meals';
+                if (localStorage.getItem(legacyKey) && !mealKeys.includes(legacyKey)) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(legacyKey));
+                        const dates = Object.keys(data);
+                        this.log(`📁 ${legacyKey} (旧形式):`);
+                        this.log(`   📅 ${dates.length} 日分のデータ`);
+                        this.log(`   ⚡ このデータを使用するには「ゲスト」モードに切り替えてください`);
+                    } catch (error) {
+                        this.log(`❌ ${legacyKey}: 旧データの読み込みエラー`, error);
+                    }
+                }
+                
+                this.log('=== データ復元方法 ===');
+                this.log('1. 上記のアカウント名に切り替え');
+                this.log('2. Firebase: OFF にする');
+                this.log('3. ページをリロード');
+                this.log('========================');
             }
 
             resetAllData() {
