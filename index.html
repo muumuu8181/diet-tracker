@@ -750,7 +750,7 @@
 
     <script>
         // ビルドバージョン（更新時刻）
-        const BUILD_VERSION = '2025.07.20-09:55';
+        const BUILD_VERSION = '2025.07.20-10:10';
         
         // Firebase設定
         const firebaseConfig = {
@@ -914,17 +914,28 @@
                 auth.signInWithPopup(provider)
                     .then((result) => {
                         const user = result.user;
-                        this.log('Google認証が成功しました', {
+                        this.log('✅ Google認証が成功しました', {
                             uid: user.uid,
                             email: user.email,
                             displayName: user.displayName
                         });
                     })
                     .catch((error) => {
-                        this.log('Google認証でエラーが発生しました', { 
+                        this.log('❌ Google認証でエラーが発生しました', { 
                             code: error.code, 
                             message: error.message 
                         });
+                        
+                        // 設定エラーの場合は具体的な指示を表示
+                        if (error.code === 'auth/configuration-not-found') {
+                            this.log('🔧 Firebase Console でGoogle認証を有効化してください:', {
+                                step1: 'Firebase Console → Authentication → Sign-in method',
+                                step2: 'Google プロバイダーを有効化',
+                                step3: '承認済みドメインに muumuu8181.github.io を追加'
+                            });
+                            alert('Google認証が設定されていません。\n\nFirebase Console でGoogle認証を有効化してください:\n1. Authentication → Sign-in method\n2. Google プロバイダーを有効化\n3. 承認済みドメインを設定');
+                        }
+                        
                         console.error('Google認証エラー:', error);
                     });
             }
@@ -943,16 +954,25 @@
 
             // ゲストモードで使用
             useGuestMode() {
-                this.log('ゲストモードで使用開始');
+                this.log('🎯 ゲストモードで使用開始');
+                
+                // Firebaseリスナーをクリア
+                if (this.currentAccountRef) {
+                    this.currentAccountRef.off();
+                    this.currentAccountRef = null;
+                    this.log('Firebaseリスナーをクリア（ゲストモード）');
+                }
+                
                 this.currentAccount = 'guest';
                 this.currentUser = null;
+                
+                // ゲストモード用のデータを新しく読み込み
                 this.meals = this.loadMeals();
                 
-                // ゲスト用のサンプルデータがない場合は作成
+                // ゲスト用のサンプルデータを作成（既存データがあっても上書き）
                 const dateString = this.getDateString(this.currentDate);
-                if (!this.meals[dateString]) {
-                    this.initSampleData();
-                }
+                this.log('ゲストモード用サンプルデータを作成', { dateString });
+                this.initSampleData();
                 
                 this.renderMeals();
                 this.updateAccountUI(null);
@@ -1512,18 +1532,20 @@
             }
 
             loadMeals() {
-                if (useFirebase) {
-                    // Firebaseからデータを読み込み
-                    this.loadMealsFromFirebase();
-                    return {};
-                } else {
+                // ゲストモードまたはFirebase無効時はローカルストレージを使用
+                if (!useFirebase || this.currentAccount === 'guest') {
                     // LocalStorageからアカウント別でデータを読み込み
                     try {
                         const storageKey = `meals_${this.currentAccount}`;
                         const stored = localStorage.getItem(storageKey);
                         const data = stored ? JSON.parse(stored) : {};
                         
-                        this.log('データを読み込み', { account: this.currentAccount, key: storageKey, dataSize: Object.keys(data).length });
+                        this.log('LocalStorageからデータを読み込み', { 
+                            account: this.currentAccount, 
+                            key: storageKey, 
+                            dataSize: Object.keys(data).length,
+                            isGuest: this.currentAccount === 'guest'
+                        });
                         
                         // 古いデータ形式を新しい形式に変換
                         return this.migrateOldData(data);
@@ -1531,10 +1553,20 @@
                         console.error('データ読み込みエラー:', error);
                         return {};
                     }
+                } else {
+                    // 認証ユーザーの場合はFirebaseからデータを読み込み
+                    this.loadMealsFromFirebase();
+                    return {};
                 }
             }
 
             loadMealsFromFirebase() {
+                // ゲストモードの場合はFirebaseにアクセスしない
+                if (this.currentAccount === 'guest') {
+                    this.log('ゲストモードのためFirebaseをスキップ');
+                    return;
+                }
+                
                 this.log('Firebaseからデータを読み込み中...', { account: this.currentAccount });
                 
                 if (typeof mealsRef === 'undefined') {
@@ -1630,18 +1662,24 @@
             }
 
             saveMeals() {
-                if (useFirebase) {
-                    // Firebaseにデータを保存
-                    this.saveMealsToFirebase();
-                } else {
+                // ゲストモードまたはFirebase無効時はローカルストレージを使用
+                if (!useFirebase || this.currentAccount === 'guest') {
                     // LocalStorageにアカウント別でデータを保存
                     try {
                         const storageKey = `meals_${this.currentAccount}`;
                         localStorage.setItem(storageKey, JSON.stringify(this.meals));
-                        this.log('データを保存', { account: this.currentAccount, key: storageKey });
+                        this.log('LocalStorageにデータを保存', { 
+                            account: this.currentAccount, 
+                            key: storageKey,
+                            isGuest: this.currentAccount === 'guest',
+                            dataSize: Object.keys(this.meals).length
+                        });
                     } catch (error) {
                         console.error('データ保存エラー:', error);
                     }
+                } else {
+                    // 認証ユーザーの場合はFirebaseにデータを保存
+                    this.saveMealsToFirebase();
                 }
             }
 
