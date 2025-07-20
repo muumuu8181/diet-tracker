@@ -631,9 +631,9 @@
             <div class="account-selector">
                 <label for="accountSelect">アカウント:</label>
                 <select id="accountSelect" name="accountSelect">
-                    <option value="account1">アカウント1</option>
-                    <option value="account2">アカウント2</option>
-                    <option value="account3">アカウント3</option>
+                    <option value="account1">デモ用アカウント</option>
+                    <option value="account2">私のアカウント</option>
+                    <option value="account3">その他のアカウント</option>
                 </select>
             </div>
             <nav class="date-nav" role="navigation" aria-label="日付切り替え">
@@ -760,7 +760,7 @@
 
     <script>
         // ビルドバージョン（更新時刻）
-        const BUILD_VERSION = '2025.07.20-08:33';
+        const BUILD_VERSION = '2025.07.20-09:15';
         
         // Firebase設定
         const firebaseConfig = {
@@ -968,35 +968,77 @@
                     existingData: !!this.meals[dateString] 
                 });
                 
-                if (!this.meals[dateString] && this.currentAccount === 'account1') {
-                    // アカウント1のみサンプルデータを作成
-                    this.meals[dateString] = {
-                        '0-6': [],
-                        '6-12': [{
-                            id: 'sample1',
-                            type: 'meal',
-                            time: '08:30',
-                            content: 'パン、牛乳'
-                        }],
-                        '12-18': [{
-                            id: 'sample2',
-                            type: 'meal',
-                            time: '12:45',
-                            content: 'ラーメン、餃子'
-                        }],
-                        '18-24': []
-                    };
+                if (!this.meals[dateString]) {
+                    // アカウント別のサンプルデータを作成
+                    if (this.currentAccount === 'account1') {
+                        // デモ用アカウント
+                        this.meals[dateString] = {
+                            '0-6': [],
+                            '6-12': [{
+                                id: 'demo1',
+                                type: 'meal',
+                                time: '07:00',
+                                content: 'デモ朝食: オートミール、バナナ'
+                            }],
+                            '12-18': [{
+                                id: 'demo2',
+                                type: 'meal',
+                                time: '12:00',
+                                content: 'デモ昼食: サラダボウル、プロテイン'
+                            }],
+                            '18-24': [{
+                                id: 'demo3',
+                                type: 'meal',
+                                time: '18:30',
+                                content: 'デモ夕食: 鶏胸肉、野菜炒め'
+                            }]
+                        };
+                        this.log('デモ用アカウントにサンプルデータを作成しました');
+                    } else if (this.currentAccount === 'account2') {
+                        // 私のアカウント
+                        this.meals[dateString] = {
+                            '0-6': [],
+                            '6-12': [{
+                                id: 'personal1',
+                                type: 'meal',
+                                time: '08:30',
+                                content: 'パン、牛乳'
+                            }],
+                            '12-18': [{
+                                id: 'personal2',
+                                type: 'meal',
+                                time: '12:45',
+                                content: 'ラーメン、餃子'
+                            }],
+                            '18-24': []
+                        };
+                        this.log('私のアカウントにサンプルデータを作成しました');
+                    } else if (this.currentAccount === 'account3') {
+                        // その他のアカウント
+                        this.meals[dateString] = {
+                            '0-6': [],
+                            '6-12': [{
+                                id: 'other1',
+                                type: 'meal',
+                                time: '08:00',
+                                content: '軽食: ヨーグルト、フルーツ'
+                            }],
+                            '12-18': [{
+                                id: 'other2',
+                                type: 'meal',
+                                time: '13:00',
+                                content: '昼食: サンドイッチ、スープ'
+                            }],
+                            '18-24': [{
+                                id: 'other3',
+                                type: 'meal',
+                                time: '20:00',
+                                content: '夕食: カレーライス'
+                            }]
+                        };
+                        this.log('その他のアカウントにサンプルデータを作成しました');
+                    }
                     this.saveMeals();
-                    this.log('アカウント1にサンプルデータを作成しました');
-                } else if (!this.meals[dateString]) {
-                    // 他のアカウントは空データで初期化
-                    this.meals[dateString] = {
-                        '0-6': [],
-                        '6-12': [],
-                        '12-18': [],
-                        '18-24': []
-                    };
-                    this.log(`${this.currentAccount}用に空データを作成`);
                 } else {
                     this.log('既存データを使用', { 
                         data: JSON.stringify(this.meals[dateString]) 
