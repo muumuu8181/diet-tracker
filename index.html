@@ -750,7 +750,7 @@
 
     <script>
         // ビルドバージョン（更新時刻）
-        const BUILD_VERSION = '2025.07.20-09:35';
+        const BUILD_VERSION = '2025.07.20-09:55';
         
         // Firebase設定
         const firebaseConfig = {
@@ -858,20 +858,37 @@
 
                 // 認証状態の監視
                 auth.onAuthStateChanged((user) => {
+                    const previousAccount = this.currentAccount;
                     this.currentUser = user;
                     if (user) {
-                        this.log('ユーザーがログインしました', { 
+                        this.log('✅ ユーザーログイン成功', { 
                             uid: user.uid, 
                             email: user.email,
-                            displayName: user.displayName 
+                            displayName: user.displayName,
+                            photoURL: user.photoURL,
+                            emailVerified: user.emailVerified,
+                            creationTime: user.metadata.creationTime,
+                            lastSignInTime: user.metadata.lastSignInTime
                         });
                         this.currentAccount = user.uid;
                         this.updateAccountUI(user);
                     } else {
-                        this.log('ユーザーがログアウトしました');
+                        this.log('❌ ユーザーログアウト（またはログイン前）', {
+                            previousAccount: previousAccount
+                        });
                         this.currentAccount = 'guest';
                         this.updateAccountUI(null);
                     }
+                    
+                    // アカウント変更時の詳細ログ
+                    if (previousAccount !== this.currentAccount) {
+                        this.log('🔄 アカウント切り替え', {
+                            from: previousAccount,
+                            to: this.currentAccount,
+                            userType: user ? 'authenticated' : 'guest'
+                        });
+                    }
+                    
                     // アカウントが変更されたのでデータを再読み込み
                     this.meals = this.loadMeals();
                     this.renderMeals();
@@ -924,6 +941,23 @@
                     });
             }
 
+            // ゲストモードで使用
+            useGuestMode() {
+                this.log('ゲストモードで使用開始');
+                this.currentAccount = 'guest';
+                this.currentUser = null;
+                this.meals = this.loadMeals();
+                
+                // ゲスト用のサンプルデータがない場合は作成
+                const dateString = this.getDateString(this.currentDate);
+                if (!this.meals[dateString]) {
+                    this.initSampleData();
+                }
+                
+                this.renderMeals();
+                this.updateAccountUI(null);
+            }
+
             // アカウントUI更新
             updateAccountUI(user) {
                 const accountSelector = document.getElementById('accountSelector');
@@ -931,16 +965,25 @@
                 if (user) {
                     // ログイン済み: ユーザー情報とボタンを表示
                     accountSelector.innerHTML = `
-                        <span style="color: #4285f4; font-weight: bold;">
-                            ${user.displayName || user.email}
-                        </span>
-                        <button onclick="mealTracker.signOut()" class="debug-btn" style="margin-left: 10px; background-color: #dc3545;">ログアウト</button>
-                        <button onclick="mealTracker.signInWithGoogle()" class="debug-btn" style="margin-left: 5px; background-color: #4285f4;">アカウント切替</button>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #4285f4; font-weight: bold; background: #e8f4fd; padding: 4px 8px; border-radius: 4px;">
+                                ✓ ログイン中: ${user.displayName || user.email}
+                            </span>
+                            <span style="color: #666; font-size: 12px;">UID: ${user.uid.substring(0, 8)}...</span>
+                            <button onclick="mealTracker.signOut()" class="debug-btn" style="background-color: #dc3545;">ログアウト</button>
+                            <button onclick="mealTracker.signInWithGoogle()" class="debug-btn" style="background-color: #4285f4;">アカウント切替</button>
+                        </div>
                     `;
                 } else {
-                    // 未ログイン: ログインボタンを表示
+                    // 未ログイン: ログインボタンとゲストモードボタンを表示
                     accountSelector.innerHTML = `
-                        <button id="googleSignInBtn" class="debug-btn" style="background-color: #4285f4; color: white;" onclick="mealTracker.signInWithGoogle()">Googleでログイン</button>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #888; font-weight: bold; background: #f5f5f5; padding: 4px 8px; border-radius: 4px;">
+                                ${this.currentAccount === 'guest' ? '👤 ゲストモード' : '未ログイン'}
+                            </span>
+                            <button onclick="mealTracker.signInWithGoogle()" class="debug-btn" style="background-color: #4285f4; color: white;">Googleでログイン</button>
+                            <button onclick="mealTracker.useGuestMode()" class="debug-btn" style="background-color: #28a745; color: white;">ゲストとして使用</button>
+                        </div>
                     `;
                 }
             }
@@ -1106,6 +1149,25 @@
                             }]
                         };
                         this.log('その他のアカウントにサンプルデータを作成しました');
+                    } else if (this.currentAccount === 'guest') {
+                        // ゲストモード
+                        this.meals[dateString] = {
+                            '0-6': [],
+                            '6-12': [{
+                                id: 'guest1',
+                                type: 'meal',
+                                time: '08:00',
+                                content: 'ゲスト朝食: トースト、コーヒー'
+                            }],
+                            '12-18': [{
+                                id: 'guest2',
+                                type: 'meal',
+                                time: '12:30',
+                                content: 'ゲスト昼食: お弁当'
+                            }],
+                            '18-24': []
+                        };
+                        this.log('ゲストモードにサンプルデータを作成しました');
                     }
                     this.saveMeals();
                 } else {
